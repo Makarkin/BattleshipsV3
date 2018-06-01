@@ -5,6 +5,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class AuxilaryMethodsXML {
 
@@ -53,7 +54,7 @@ public class AuxilaryMethodsXML {
         return (Object) document;
     }
 
-    public static synchronized String readXMLPlayer(Object object, String hisNickOrHisEnemyNick) throws IOException, ClassNotFoundException {
+    public static String readXMLPlayer(Object object, String hisNickOrHisEnemyNick) throws IOException, ClassNotFoundException {
         String result = "";
         Document document = (Document) object;
         NodeList nodeList = document.getElementsByTagName("Player");
@@ -71,7 +72,7 @@ public class AuxilaryMethodsXML {
         return result;
     }
 
-    public static synchronized Object writeXMLPlayer(String yourNickname, String enemyNickname) throws ParserConfigurationException {
+    public static Object writeXMLPlayer(String yourNickname, String enemyNickname) throws ParserConfigurationException {
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
         Document document = documentBuilder.newDocument();
@@ -81,5 +82,43 @@ public class AuxilaryMethodsXML {
         root.setAttribute("EnemyNickName", enemyNickname);
         document.appendChild(root);
         return (Object) document;
+    }
+
+    public static Object writeXMLPlayers(ArrayList<PlayerOnServer> players) throws ParserConfigurationException {
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+        Document document = documentBuilder.newDocument();
+
+        Element root = document.createElement("Players");
+        for (int i = 0;  i < players.size(); i++) {
+        Element element = document.createElement("Player");
+        element.setAttribute("nickName", players.get(i).getNickName());
+        element.setAttribute("status", players.get(i).getStatus());
+        root.appendChild(element);
+        }
+
+        document.appendChild(root);
+        return (Object) document;
+    }
+
+    public static ArrayList<PlayerOnServer> readXMLPlayers(Object object) throws IOException, ClassNotFoundException {
+        ArrayList<PlayerOnServer> players = new ArrayList<>();
+        String playerNickname;
+        String playerStatus;
+        Document document = (Document) object;
+        NodeList nodeList = document.getElementsByTagName("Players");
+        Node node = nodeList.item(0);
+        NodeList children = node.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node childrenNode = children.item(i);
+            if (childrenNode.getNodeType() == Node.ELEMENT_NODE) {
+                NamedNodeMap attributes = childrenNode.getAttributes();
+                playerNickname = attributes.getNamedItem("nickName").getNodeValue();
+                playerStatus = attributes.getNamedItem("status").getNodeValue();
+                players.add(new PlayerOnServer(playerNickname, playerStatus));
+            }
+        }
+
+        return players;
     }
 }

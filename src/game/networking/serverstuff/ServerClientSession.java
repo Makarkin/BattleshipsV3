@@ -3,6 +3,8 @@ package game.networking.serverstuff;
 import game.auxilary.AuxilaryMethodsXML;
 import game.auxilary.PlayerOnServer;
 import org.w3c.dom.*;
+
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -23,6 +25,8 @@ public class ServerClientSession extends Thread {
 
     public ServerClientSession(final Socket socket) throws IOException {
         this.socket = socket;
+        //start() не запускает run()
+        //this.start();
         this.run();
     }
 
@@ -36,26 +40,36 @@ public class ServerClientSession extends Thread {
              ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
             document = (Document) inputStream.readObject();
             System.out.println("Принято");
+            //получаем имя подключившегося игрока
             String player1nick = AuxilaryMethodsXML.readXMLPlayer(document, "his");
             this.yourname = player1nick;
+            //добавляем игрока в список игроков на сервере, причем он пока свободен
             PlayerOnServer player = new PlayerOnServer(player1nick, "not busy");
             Server.getPlayers().add(player);
             ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
-            //переписать в xml
-            Object playerObject = (Object) Server.getPlayers();
+            Object playerObject = AuxilaryMethodsXML.writeXMLPlayers(Server.getPlayers());
+            //отправляем список игроков клиенту
             outputStream.writeObject(playerObject);
+            //читаем запрос от клиента на желаемого противника
             document = (Document) inputStream.readObject();
             String[] playersNicknames = AuxilaryMethodsXML.readXMLPlayer(document, "enemy").split(" ");
+            //составляем список запросов клиентов на игру друг с другом
             Server.getRequest().put(playersNicknames[0], playersNicknames[1]);
-            while (true) {
+
+            //тут должно происходить взаимодействие между клиентами с выбранным оппонентом
+            // т.е в одной игровой сессии, на сервере им дали exchanger
+            //для обмена данными
+/*            while (true) {
                 Object object = inputStream.readObject();
                 exchanger.exchange(object);
-            }
+            }*/
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
-        } catch (InterruptedException e) {
+        } /*catch (InterruptedException e) {
+            e.printStackTrace();
+        }*/ catch (ParserConfigurationException e) {
             e.printStackTrace();
         }
     }

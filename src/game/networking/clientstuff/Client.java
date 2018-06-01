@@ -36,6 +36,7 @@ public class Client extends Thread {
     public Client(InetAddress inetAddress, int port) {
         this.host = inetAddress;
         this.port = port;
+        //start() не запускает run()
         //this.start();
     }
 
@@ -45,9 +46,10 @@ public class Client extends Thread {
             outputStream = new ObjectOutputStream(socket.getOutputStream());
             outputStream.writeObject(writeXMLPlayer(yourNickname, "none"));
             System.out.println("Создано");
+
             inputStream = new ObjectInputStream(socket.getInputStream());
-            ArrayList<PlayerOnServer> players = (ArrayList<PlayerOnServer>) inputStream.readObject();
-            System.out.println("Отправлено");
+            ArrayList<PlayerOnServer> players = AuxilaryMethodsXML.readXMLPlayers(inputStream.readObject());
+            System.out.println("Принято");
 
             System.out.println("Choose number of not busy player: ");
             for (PlayerOnServer player : players) {
