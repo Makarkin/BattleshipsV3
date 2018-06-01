@@ -39,26 +39,29 @@ public class ServerClientSession extends Thread {
         try {
              ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
             document = (Document) inputStream.readObject();
-            System.out.println("Принято");
             //получаем имя подключившегося игрока
             String player1nick = AuxilaryMethodsXML.readXMLPlayer(document, "his");
             this.yourname = player1nick;
+
             //добавляем игрока в список игроков на сервере, причем он пока свободен
             PlayerOnServer player = new PlayerOnServer(player1nick, "not busy");
             Server.getPlayers().add(player);
             ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
             Object playerObject = AuxilaryMethodsXML.writeXMLPlayers(Server.getPlayers());
+
             //отправляем список игроков клиенту
             outputStream.writeObject(playerObject);
+
             //читаем запрос от клиента на желаемого противника
             document = (Document) inputStream.readObject();
             String[] playersNicknames = AuxilaryMethodsXML.readXMLPlayer(document, "enemy").split(" ");
+
             //составляем список запросов клиентов на игру друг с другом
             Server.getRequest().put(playersNicknames[0], playersNicknames[1]);
 
             //тут должно происходить взаимодействие между клиентами с выбранным оппонентом
             // т.е в одной игровой сессии, на сервере им дали exchanger
-            //для обмена данными
+            //для обмена данными. Исходящие данные отправляем по exchange(), входящие берем от клиентов
 /*            while (true) {
                 Object object = inputStream.readObject();
                 exchanger.exchange(object);

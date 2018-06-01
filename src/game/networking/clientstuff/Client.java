@@ -44,13 +44,14 @@ public class Client extends Thread {
     public void run() {
         try (Socket socket = new Socket(this.host, this.port)) {
             outputStream = new ObjectOutputStream(socket.getOutputStream());
+            //отправляем имя игрока на сервер
             outputStream.writeObject(writeXMLPlayer(yourNickname, "none"));
-            System.out.println("Создано");
 
+            //получаем список игроков на сервере
             inputStream = new ObjectInputStream(socket.getInputStream());
             ArrayList<PlayerOnServer> players = AuxilaryMethodsXML.readXMLPlayers(inputStream.readObject());
-            System.out.println("Принято");
 
+            //выбираем свободного игрока и отправляем запрос на игру с ним
             System.out.println("Choose number of not busy player: ");
             for (PlayerOnServer player : players) {
                 System.out.println(i + player.getNickName() + " " + player.getStatus());
@@ -62,6 +63,8 @@ public class Client extends Thread {
             if (enemyPlayer.getStatus() == "not busy") {
                 outputStream.writeObject(writeXMLPlayer(yourNickname, enemyPlayer.getNickName()));
             }
+
+            //тут должен быть непрерывный обмен с ServerClientSession на сервере
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ParserConfigurationException e) {
