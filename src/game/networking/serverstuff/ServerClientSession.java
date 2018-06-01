@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Exchanger;
 
 public class ServerClientSession extends Thread {
@@ -25,54 +24,69 @@ public class ServerClientSession extends Thread {
 
     public ServerClientSession(final Socket socket) throws IOException {
         this.socket = socket;
-        //start() не запускает run()
-        //this.start();
-        this.run();
+        this.start();
     }
 
     public String getYourname() {
         return yourname;
     }
 
+    private void chooseMethods(Document document) throws IOException, ParserConfigurationException {
+        String rootName = document.getDocumentElement().getNodeName();
+        if (null == rootName) {
+            System.out.println("null");
+            return;
+        } else if ("Player".equals(rootName)) {
+            String enemyName = "";
+            String playerName = "";
+            NodeList nodeList = document.getElementsByTagName("Player");
+            Node node = nodeList.item(0);
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                NamedNodeMap attributes = node.getAttributes();
+                playerName = attributes.getNamedItem("nickName").getNodeValue();
+                enemyName = attributes.getNamedItem("EnemyNickName").getNodeValue();
+            }
+
+            if ("none".equals(enemyName)) {
+                System.out.println("Player no enemy");
+                this.yourname = playerName;
+                //добавляем игрока в список игроков на сервере, причем он пока свободен
+                PlayerOnServer player = new PlayerOnServer(playerName, "not busy");
+                Server.getPlayers().add(player);
+                if (Server.getPlayers().size() > 1) {
+                ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
+                Object playerObject = AuxilaryMethodsXML.writeXMLPlayers(Server.getPlayers());
+                //отправляем список игроков клиенту
+                outputStream.writeObject(playerObject);
+                }
+            } else if (!"none".equals(enemyName)) {
+                System.out.println("Player with enemy");
+                String[] playersNicknames = new String[2];
+                playersNicknames[0] = playerName;
+                playersNicknames[1] = enemyName;
+                Server.getRequest().put(playersNicknames[0], playersNicknames[1]);
+            }
+        } else if ("FireResult".equals(rootName)) {
+
+        } else if ("EnemyFire".equals(rootName)){
+
+        }
+    }
+
     @Override
     public void run() {
         try {
-             ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
-            document = (Document) inputStream.readObject();
-            //получаем имя подключившегося игрока
-            String player1nick = AuxilaryMethodsXML.readXMLPlayer(document, "his");
-            this.yourname = player1nick;
-
-            //добавляем игрока в список игроков на сервере, причем он пока свободен
-            PlayerOnServer player = new PlayerOnServer(player1nick, "not busy");
-            Server.getPlayers().add(player);
-            ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
-            Object playerObject = AuxilaryMethodsXML.writeXMLPlayers(Server.getPlayers());
-
-            //отправляем список игроков клиенту
-            outputStream.writeObject(playerObject);
-
-            //читаем запрос от клиента на желаемого противника
-            document = (Document) inputStream.readObject();
-            String[] playersNicknames = AuxilaryMethodsXML.readXMLPlayer(document, "enemy").split(" ");
-
-            //составляем список запросов клиентов на игру друг с другом
-            Server.getRequest().put(playersNicknames[0], playersNicknames[1]);
-
-            //тут должно происходить взаимодействие между клиентами с выбранным оппонентом
-            // т.е в одной игровой сессии, на сервере им дали exchanger
-            //для обмена данными. Исходящие данные отправляем по exchange(), входящие берем от клиентов
-/*            while (true) {
-                Object object = inputStream.readObject();
-                exchanger.exchange(object);
-            }*/
+            while (true) {
+                ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
+                document = (Document) inputStream.readObject();
+                System.out.println(document.toString());
+                chooseMethods(document);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
-        } /*catch (InterruptedException e) {
-            e.printStackTrace();
-        }*/ catch (ParserConfigurationException e) {
+        } catch (ParserConfigurationException e) {
             e.printStackTrace();
         }
     }

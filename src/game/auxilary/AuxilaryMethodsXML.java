@@ -101,11 +101,10 @@ public class AuxilaryMethodsXML {
         return (Object) document;
     }
 
-    public static ArrayList<PlayerOnServer> readXMLPlayers(Object object) throws IOException, ClassNotFoundException {
+    public static ArrayList<PlayerOnServer> readXMLPlayers(Document document) throws IOException, ClassNotFoundException {
         ArrayList<PlayerOnServer> players = new ArrayList<>();
         String playerNickname;
         String playerStatus;
-        Document document = (Document) object;
         NodeList nodeList = document.getElementsByTagName("Players");
         Node node = nodeList.item(0);
         NodeList children = node.getChildNodes();

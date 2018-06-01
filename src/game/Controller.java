@@ -13,13 +13,12 @@ import org.w3c.dom.*;
 import javax.xml.parsers.*;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
-import java.util.concurrent.CountDownLatch;
-
 import static game.Main.yourNickname;
 import static javafx.scene.input.MouseButton.*;
 import static javafx.scene.paint.Color.*;
@@ -204,7 +203,6 @@ public class Controller {
     @FXML
     private void start(ActionEvent actionEvent) {
         System.out.println("Start");
-        client.run();
     }
 
     private void transferFireCoordinates(Object object) throws IOException {
@@ -226,13 +224,15 @@ public class Controller {
     }
 
     @FXML
-    public void initialize() throws UnknownHostException, InterruptedException {
+    public void initialize() throws IOException {
       yourLabel.setText(yourNickname);
         Scanner scanner = new Scanner(System.in);
         System.out.println("Enter IP-address of server");
         InetAddress inetAddress = InetAddress.getByName("127.0.0.1");//InetAddress.getByName(scanner.nextLine());
         System.out.println("Enter number of port");
         int port = 6666;//Integer.valueOf(scanner.nextLine());;
-        client = new Client(inetAddress, port);
+        Socket socket = new Socket(inetAddress, port);
+        client = new Client(socket);
+        client.start();
     }
 }
