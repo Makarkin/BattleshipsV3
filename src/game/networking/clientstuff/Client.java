@@ -1,5 +1,6 @@
 package game.networking.clientstuff;
 
+import game.Controller;
 import game.auxilary.AuxilaryMethodsXML;
 import game.auxilary.PlayerOnServer;
 import game.networking.serverstuff.Server;
@@ -21,11 +22,31 @@ import static game.Main.yourNickname;
 import static game.auxilary.AuxilaryMethodsXML.*;
 
 public class Client extends Thread {
-    int i = 0;
+
+    private String enemyName;
+    private int onFireI = 0;
+    private int onFireJ = 0;
     private Scanner scanner = new Scanner(System.in);
     private final Socket socket;
     private ObjectInputStream inputStream;
     private ObjectOutputStream outputStream;
+
+    public void setEnemyName(String enemyName) {
+        this.enemyName = enemyName;
+    }
+
+
+    public void setOnFireI(int onFireI) {
+        this.onFireI = onFireI;
+    }
+
+    public void setOnFireJ(int onFireJ) {
+        this.onFireJ = onFireJ;
+    }
+
+    public Socket getSocket() {
+        return socket;
+    }
 
     public synchronized ObjectInputStream getInputStream() {
         return inputStream;
@@ -44,10 +65,16 @@ public class Client extends Thread {
         if (rootName == null) {
             return;
         } else if ("Players".equals(rootName)) {
-            System.out.println("Players");
-            ArrayList<PlayerOnServer> players = AuxilaryMethodsXML.readXMLPlayers(document);
-            //выбираем свободного игрока и отправляем запрос на игру с ним
+            ArrayList<PlayerOnServer> players = new ArrayList<>();
+            players = AuxilaryMethodsXML.readXMLPlayers(document);
+            while (players.size() < 2) {
+                ObjectInputStream tempInputStream = new ObjectInputStream(socket.getInputStream());
+                Document tempDocument = (Document) tempInputStream.readObject();
+                players = AuxilaryMethodsXML.readXMLPlayers(tempDocument);
+            }
+
             System.out.println("Choose number of not busy player: ");
+            int i = 0;
             for (PlayerOnServer player : players) {
                 if (!player.getNickName().equals(yourNickname)) {
                     System.out.println(i + " " + player.getNickName() + " " + player.getStatus());
@@ -63,10 +90,21 @@ public class Client extends Thread {
                 outputStream = new ObjectOutputStream(socket.getOutputStream());
                 outputStream.writeObject(requestPlayer);
             }
-        } else if ("FireResult".equals(rootName)) {
+        } else if ("GameCanStart".equals(rootName)) {
+            String[] firstTurnName = AuxilaryMethodsXML.readXMLSignalToGame(document);
+            if (yourNickname.equals(firstTurnName[0])) {
+                Controller.setYourTurn(true);
+                this.enemyName = firstTurnName[1];
+                do {
+                    Object fireObject = writeXMLFire(this.onFireI, this.onFireJ, this.enemyName);
+                    outputStream = new ObjectOutputStream(socket.getOutputStream());
+                    outputStream.writeObject(fireObject);
+                } while (this.onFireI == 0 && this.onFireJ == 0);
+            }
 
+            System.out.println("GameCanStart");
         } else if ("EnemyFire".equals(rootName)) {
-
+            System.out.println("EnemyFire");
         }
     }
 
@@ -74,7 +112,6 @@ public class Client extends Thread {
     public void run() {
         try {
             outputStream = new ObjectOutputStream(socket.getOutputStream());
-            //отправляем имя игрока на сервер
             outputStream.writeObject(writeXMLPlayer(yourNickname, "none"));
             inputStream = new ObjectInputStream(socket.getInputStream());
             while (true) {

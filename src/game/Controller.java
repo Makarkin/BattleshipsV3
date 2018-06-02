@@ -12,6 +12,8 @@ import game.networking.clientstuff.Client;
 import org.w3c.dom.*;
 import javax.xml.parsers.*;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -44,8 +46,12 @@ public class Controller {
     private int counterOfDeck = 0;
     private int index = 0;
     private Board yourBoard = new Board();
-    private boolean yourTurn = true;
+    private static boolean yourTurn = false;
     private Client client;
+
+    public static void setYourTurn(boolean yourTurn) {
+        Controller.yourTurn = yourTurn;
+    }
 
     @FXML
     private void makeShot(MouseEvent mouseEvent) throws ParserConfigurationException, IOException, ClassNotFoundException {
@@ -53,10 +59,9 @@ public class Controller {
             Rectangle rectangle = (Rectangle) mouseEvent.getSource();
             Integer i = GridPane.getRowIndex(rectangle);
             Integer j = GridPane.getColumnIndex(rectangle);
-            Object coordinatesOfFire = AuxilaryMethodsXML.writeXMLFire(i, j);
-            transferFireCoordinates(coordinatesOfFire);
-            boolean b = acceptResultOfFireController();
-            if (b) {
+            client.setOnFireI(i);
+            client.setOnFireJ(j);
+/*            if (true) {
                 rectangle.setFill(RED);
                 enemySumOfDecks--;
                 if (enemySumOfDecks == 0) {
@@ -64,7 +69,7 @@ public class Controller {
                 }
             } else {
                 rectangle.setFill(BLACK);
-            }
+            }*/
 
             yourTurn = false;
         }
@@ -180,14 +185,14 @@ public class Controller {
                 yourBoard.setIndexCell(cell, i, j);
                 itShouldFrozen.add(new IndexVault(i, j));
                 if (counterOfDeck < numberOfDeckList.get(index)) {
-                    if (i > 0 && i < 9) {
+                    if (j > 0 && j < 9) {
                         if (!yourBoard.getIndexCell(i, j - 1).isFrozen()) yourBoard.getIndexCell(i, j - 1).setModifable(true);
                         if (!yourBoard.getIndexCell(i, j + 1).isFrozen()) yourBoard.getIndexCell(i, j + 1).setModifable(true);
                     }
-                    if (i == 0) {
+                    if (j == 0) {
                         if (!yourBoard.getIndexCell(i, j + 1).isFrozen()) yourBoard.getIndexCell(i, j + 1).setModifable(true);
                     }
-                    if (i == 9) {
+                    if (j == 9) {
                         if (!yourBoard.getIndexCell(i, j - 1).isFrozen()) yourBoard.getIndexCell(i, j - 1).setModifable(true);
                     }
                 } else {
@@ -205,27 +210,15 @@ public class Controller {
         System.out.println("Start");
     }
 
-    private void transferFireCoordinates(Object object) throws IOException {
-        //отправка клиенту-противнику координаты залпа
-        client.getOutputStream().writeObject(object);
-    }
-
-    private boolean acceptResultOfFireController() throws IOException, ClassNotFoundException {
-        //принятие результата вашего залпа
-        Object object = client.getInputStream().readObject();
-        Document document = (Document) object;
-        return AuxilaryMethodsXML.acceptResultOfFire(document);
-    }
-
     private void transferResultOfFireController(boolean b) throws ParserConfigurationException, IOException {
-        //отправка клиенту-противнику результата его стрельбы
+        ObjectOutputStream transferOutputStream = new ObjectOutputStream(client.getSocket().getOutputStream());
         Object object = AuxilaryMethodsXML.transferResultOfFire(b);
-        client.getOutputStream().writeObject(object);
+        transferOutputStream.writeObject(object);
     }
 
     @FXML
     public void initialize() throws IOException {
-      yourLabel.setText(yourNickname);
+        yourLabel.setText(yourNickname);
         Scanner scanner = new Scanner(System.in);
         System.out.println("Enter IP-address of server");
         InetAddress inetAddress = InetAddress.getByName("127.0.0.1");//InetAddress.getByName(scanner.nextLine());

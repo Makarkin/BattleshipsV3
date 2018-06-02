@@ -1,6 +1,8 @@
 package game.networking.serverstuff;
 
+import game.IndexVault;
 import game.auxilary.AuxilaryMethodsXML;
+import game.auxilary.FireCoordinates;
 import game.auxilary.PlayerOnServer;
 import org.w3c.dom.*;
 
@@ -9,16 +11,25 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Exchanger;
+
+import static game.networking.serverstuff.Server.getServerClientSessionByName;
 
 public class ServerClientSession extends Thread {
 
-    Document document;
+    private Document document;
     private String yourname;
     private final Socket socket;
-    private Exchanger<Object> exchanger;
+    private Exchanger<Document> exchanger = null;
 
-    public void setExchanger(Exchanger<Object> exchanger) {
+    public Exchanger<Document> getExchanger() {
+        return exchanger;
+    }
+
+    public void setExchanger(Exchanger<Document> exchanger) {
         this.exchanger = exchanger;
     }
 
@@ -31,7 +42,7 @@ public class ServerClientSession extends Thread {
         return yourname;
     }
 
-    private void chooseMethods(Document document) throws IOException, ParserConfigurationException {
+    private void chooseMethods(Document document) throws IOException, ParserConfigurationException, InterruptedException, ClassNotFoundException {
         String rootName = document.getDocumentElement().getNodeName();
         if (null == rootName) {
             System.out.println("null");
@@ -50,26 +61,53 @@ public class ServerClientSession extends Thread {
             if ("none".equals(enemyName)) {
                 System.out.println("Player no enemy");
                 this.yourname = playerName;
-                //добавляем игрока в список игроков на сервере, причем он пока свободен
                 PlayerOnServer player = new PlayerOnServer(playerName, "not busy");
-                Server.getPlayers().add(player);
-                if (Server.getPlayers().size() > 1) {
-                ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
-                Object playerObject = AuxilaryMethodsXML.writeXMLPlayers(Server.getPlayers());
-                //отправляем список игроков клиенту
-                outputStream.writeObject(playerObject);
-                }
+                Server.addPlayer(player);
+
+                do {sleep(100);
+                    ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
+                    ArrayList<PlayerOnServer> tempPlayers = Server.getPlayers();
+                    Object playerObject = AuxilaryMethodsXML.writeXMLPlayers(tempPlayers);
+                    outputStream.writeObject(playerObject);
+                } while (Server.getPlayers().size() < 2);
             } else if (!"none".equals(enemyName)) {
                 System.out.println("Player with enemy");
                 String[] playersNicknames = new String[2];
                 playersNicknames[0] = playerName;
                 playersNicknames[1] = enemyName;
                 Server.getRequest().put(playersNicknames[0], playersNicknames[1]);
+                sleep(100);
+                Set<String> keyset = Server.getRequest().keySet();
+                for (String s : keyset) {
+                    System.out.println(yourname + " " + s + " " + Server.getRequest().get(s));
+                }
+
+                if (Server.getRequest().size() > 1 && Server.getRequest().get(playersNicknames[1]).equals(playersNicknames[0])) {
+                    Exchanger<Document> exchanger = new Exchanger<>();
+                    if (Server.getServerClientSessionByName(playersNicknames[0]).getExchanger() == null &&
+                            Server.getServerClientSessionByName(playersNicknames[1]).getExchanger() == null) {
+                        Server.getServerClientSessionByName(playersNicknames[0]).setExchanger(exchanger);
+                        Server.getServerClientSessionByName(playersNicknames[1]).setExchanger(exchanger);
+                    }
+
+                    Server.getRequest().remove(playersNicknames[0]);
+                }
+
+                String maxString = playersNicknames[0];
+                    if (playersNicknames[1].hashCode() > maxString.hashCode()) {
+                        maxString = playersNicknames[1];
+                    }
+
+                ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
+                Object gameStart = AuxilaryMethodsXML.writeXMLSignalToGame(maxString, playersNicknames[0], playersNicknames[1]);
+                outputStream.writeObject(gameStart);
             }
         } else if ("FireResult".equals(rootName)) {
-
-        } else if ("EnemyFire".equals(rootName)){
-
+            System.out.println("FireResult");
+        } else if ("EnemyFire".equals(rootName)) {
+            FireCoordinates fireCoordinates = AuxilaryMethodsXML.readXMLFire(document);
+            Server.getFireCoordinates().add(fireCoordinates);
+            System.out.println("EnemyFire");
         }
     }
 
@@ -77,9 +115,16 @@ public class ServerClientSession extends Thread {
     public void run() {
         try {
             while (true) {
+                if (Server.getFireCoordinates() != null) {
+                    for (FireCoordinates coordinates : Server.getFireCoordinates()) {
+                        if (yourname.equals(coordinates.getTo())) {
+                            ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
+                        }
+                    }
+                }
+
                 ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
                 document = (Document) inputStream.readObject();
-                System.out.println(document.toString());
                 chooseMethods(document);
             }
         } catch (IOException e) {
@@ -87,6 +132,8 @@ public class ServerClientSession extends Thread {
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }

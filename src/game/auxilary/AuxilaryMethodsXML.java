@@ -1,5 +1,6 @@
 package game.auxilary;
 
+import game.IndexVault;
 import org.w3c.dom.*;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -40,7 +41,7 @@ public class AuxilaryMethodsXML {
         return result;
     }
 
-    public static Object writeXMLFire(int i, int j) throws ParserConfigurationException {
+    public static Object writeXMLFire(int i, int j, String enemyName) throws ParserConfigurationException {
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
         Document document = documentBuilder.newDocument();
@@ -49,9 +50,26 @@ public class AuxilaryMethodsXML {
         Element element = document.createElement("fire_on");
         element.setAttribute("i", String.valueOf(i));
         element.setAttribute("j", String.valueOf(j));
+        element.setAttribute("to", enemyName);
         root.appendChild(element);
         document.appendChild(root);
         return (Object) document;
+    }
+
+    public static FireCoordinates readXMLFire(Document document) throws ParserConfigurationException {
+        int i = 0;
+        int j = 0;
+        String to = "";
+        NodeList nodeList = document.getElementsByTagName("EnemyFire");
+        Node node = nodeList.item(0);
+        if (node.getNodeType() == Node.ELEMENT_NODE) {
+            NamedNodeMap attributes = node.getAttributes();
+            i = Integer.valueOf(attributes.getNamedItem("i").getNodeValue());
+            j = Integer.valueOf(attributes.getNamedItem("j").getNodeValue());
+            to = attributes.getNamedItem("to").getNodeValue();
+        }
+
+        return new FireCoordinates(i, j, to);
     }
 
     public static String readXMLPlayer(Object object, String hisNickOrHisEnemyNick) throws IOException, ClassNotFoundException {
@@ -82,6 +100,31 @@ public class AuxilaryMethodsXML {
         root.setAttribute("EnemyNickName", enemyNickname);
         document.appendChild(root);
         return (Object) document;
+    }
+
+    public static Object writeXMLSignalToGame(String firstTurnNick, String yourname, String enemyname) throws ParserConfigurationException {
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+        Document document = documentBuilder.newDocument();
+
+        Element root = document.createElement("GameCanStart");
+        root.setAttribute("FirstTurn", firstTurnNick);
+        root.setAttribute("enemyName", firstTurnNick);
+        document.appendChild(root);
+        return (Object) document;
+    }
+
+    public static String[] readXMLSignalToGame(Document document) throws ParserConfigurationException {
+        String[] result = new String[2];
+        NodeList nodeList = document.getElementsByTagName("GameCanStart");
+        Node node = nodeList.item(0);
+        if (node.getNodeType() == Node.ELEMENT_NODE) {
+            NamedNodeMap attributes = node.getAttributes();
+            result[0] = attributes.getNamedItem("FirstTurn").getNodeValue();
+            result[1] = attributes.getNamedItem("enemyName").getNodeValue();
+        }
+
+        return result;
     }
 
     public static Object writeXMLPlayers(ArrayList<PlayerOnServer> players) throws ParserConfigurationException {
