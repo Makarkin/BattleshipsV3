@@ -3,11 +3,7 @@ package game.networking.clientstuff;
 import game.Controller;
 import game.auxilary.AuxilaryMethodsXML;
 import game.auxilary.PlayerOnServer;
-import game.networking.serverstuff.Server;
 import org.w3c.dom.Document;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
@@ -27,9 +23,14 @@ public class Client extends Thread {
     private int onFireI = 0;
     private int onFireJ = 0;
     private Scanner scanner = new Scanner(System.in);
-    private final Socket socket;
+    private Socket socket;
     private ObjectInputStream inputStream;
     private ObjectOutputStream outputStream;
+    private Controller controller;
+
+    public void setSocket(Socket socket) {
+        this.socket = socket;
+    }
 
     public void setEnemyName(String enemyName) {
         this.enemyName = enemyName;
@@ -56,8 +57,13 @@ public class Client extends Thread {
         return outputStream;
     }
 
-    public Client(final Socket socket) {
+    public Client(Controller controller) {
+        this.controller = controller;
+    }
+
+    public Client(final Socket socket, Controller controller) {
         this.socket = socket;
+        this.controller = controller;
     }
 
     private void chooseMethods(Document document) throws IOException, ClassNotFoundException, ParserConfigurationException {
@@ -104,6 +110,10 @@ public class Client extends Thread {
 
             System.out.println("GameCanStart");
         } else if ("EnemyFire".equals(rootName)) {
+            boolean result = controller.getShot(document);
+            outputStream = new ObjectOutputStream(socket.getOutputStream());
+            Object resultObject =writeResultOfFire(result);
+            outputStream.writeObject(resultObject);
             System.out.println("EnemyFire");
         }
     }

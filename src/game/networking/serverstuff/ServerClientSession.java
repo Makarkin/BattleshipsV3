@@ -105,8 +105,9 @@ public class ServerClientSession extends Thread {
         } else if ("FireResult".equals(rootName)) {
             System.out.println("FireResult");
         } else if ("EnemyFire".equals(rootName)) {
-            FireCoordinates fireCoordinates = AuxilaryMethodsXML.readXMLFire(document);
-            Server.getFireCoordinates().add(fireCoordinates);
+            document = exchanger.exchange(document);
+            ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
+            outputStream.writeObject(document);
             System.out.println("EnemyFire");
         }
     }
@@ -115,17 +116,11 @@ public class ServerClientSession extends Thread {
     public void run() {
         try {
             while (true) {
-                if (Server.getFireCoordinates() != null) {
-                    for (FireCoordinates coordinates : Server.getFireCoordinates()) {
-                        if (yourname.equals(coordinates.getTo())) {
-                            ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
-                        }
-                    }
+                if (exchanger == null) {
+                    ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
+                    document = (Document) inputStream.readObject();
+                    chooseMethods(document);
                 }
-
-                ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
-                document = (Document) inputStream.readObject();
-                chooseMethods(document);
             }
         } catch (IOException e) {
             e.printStackTrace();

@@ -12,11 +12,9 @@ import game.networking.clientstuff.Client;
 import org.w3c.dom.*;
 import javax.xml.parsers.*;
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -53,6 +51,10 @@ public class Controller {
         Controller.yourTurn = yourTurn;
     }
 
+    public Controller() {
+        this.client = new Client(this);
+    }
+
     @FXML
     private void makeShot(MouseEvent mouseEvent) throws ParserConfigurationException, IOException, ClassNotFoundException {
         if (yourTurn) {
@@ -75,14 +77,12 @@ public class Controller {
         }
     }
 
-    private void getShot() throws IOException, ParserConfigurationException, ClassNotFoundException {
+    public boolean getShot(Document document) throws IOException, ParserConfigurationException, ClassNotFoundException {
         //принятие координат вражеского залпа
+        boolean result = false;
         if (!yourTurn) {
-            boolean b;
             int iIndex;
             int jIndex;
-            Object enemyShotCoordinates = client.getInputStream().readObject();
-            Document document = (Document) enemyShotCoordinates;
             NodeList nodeList = document.getElementsByTagName("EnemyFire");
             Node node = nodeList.item(0);
             NodeList children = node.getChildNodes();
@@ -94,26 +94,25 @@ public class Controller {
                     jIndex = Integer.valueOf(attributes.getNamedItem("j").getNodeValue());
                     if (yourBoard.getIndexCell(iIndex, jIndex).isWithShip() == true) {
                         yourSumOfDecks--;
-                        b = true;
                         for (javafx.scene.Node element : youGridPane.getChildren()) {
                             Rectangle rectangle = (Rectangle) element;
                             rectangle.setFill(RED);
-
+                            result = true;
                         }
 
                         if (yourSumOfDecks == 0) {
                             winLabel.setText("You lose!");
                         }
                     } else {
-                        b = false;
+                        result = false;
                     }
-
-                    transferResultOfFireController(b);
                 }
             }
 
             yourTurn = true;
         }
+
+        return result;
     }
 
     @FXML
@@ -210,12 +209,6 @@ public class Controller {
         System.out.println("Start");
     }
 
-    private void transferResultOfFireController(boolean b) throws ParserConfigurationException, IOException {
-        ObjectOutputStream transferOutputStream = new ObjectOutputStream(client.getSocket().getOutputStream());
-        Object object = AuxilaryMethodsXML.transferResultOfFire(b);
-        transferOutputStream.writeObject(object);
-    }
-
     @FXML
     public void initialize() throws IOException {
         yourLabel.setText(yourNickname);
@@ -225,7 +218,7 @@ public class Controller {
         System.out.println("Enter number of port");
         int port = 6666;//Integer.valueOf(scanner.nextLine());;
         Socket socket = new Socket(inetAddress, port);
-        client = new Client(socket);
+        client.setSocket(socket);
         client.start();
     }
 }

@@ -1,6 +1,5 @@
 package game.auxilary;
 
-import game.IndexVault;
 import org.w3c.dom.*;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -10,35 +9,30 @@ import java.util.ArrayList;
 
 public class AuxilaryMethodsXML {
 
-    public static Object transferResultOfFire(boolean b) throws ParserConfigurationException, IOException {
+    public static Object transferFireCoordinatesFromServer(FireCoordinates fireCoordinates) throws ParserConfigurationException, IOException {
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
         Document document = documentBuilder.newDocument();
 
-        Element root = document.createElement("FireResult");
-        Element element = document.createElement("shot");
-        element.setAttribute("result", String.valueOf(b));
+        Element root = document.createElement("EnemyFire");
+        Element element = document.createElement("fire_on");
+        element.setAttribute("i", String.valueOf(fireCoordinates.getI()));
+        element.setAttribute("j", String.valueOf(fireCoordinates.getJ()));
         root.appendChild(element);
         document.appendChild(root);
         Object object = (Object) document;
         return object;
     }
 
-    public static boolean acceptResultOfFire(Object object) throws IOException, ClassNotFoundException {
-        boolean result = false;
-        Document document = (Document) object;
-        NodeList nodeList = document.getElementsByTagName("FireResult");
-        Node node = nodeList.item(0);
-        NodeList children = node.getChildNodes();
-        for (int i = 0; i < children.getLength(); i++) {
-            Node childrenNode = children.item(i);
-            if (childrenNode.getNodeType() == Node.ELEMENT_NODE) {
-                NamedNodeMap attributes = childrenNode.getAttributes();
-                result = Boolean.valueOf(attributes.getNamedItem("result").getNodeValue());
-            }
-        }
+    public static Object writeResultOfFire(Boolean result) throws ParserConfigurationException {
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+        Document document = documentBuilder.newDocument();
 
-        return result;
+        Element root = document.createElement("Result");
+        root.setAttribute("Has got?", String.valueOf(result));
+        document.appendChild(root);
+        return (Object) document;
     }
 
     public static Object writeXMLFire(int i, int j, String enemyName) throws ParserConfigurationException {

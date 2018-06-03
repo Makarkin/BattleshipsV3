@@ -12,14 +12,9 @@ import java.util.HashMap;
 public class Server extends Thread {
     private int port;
     private boolean flag = true;
-    private static volatile ArrayList<FireCoordinates> fireCoordinates = null;
     private static volatile ArrayList<PlayerOnServer> players = new ArrayList<>();;
     private static ArrayList<ServerClientSession> listOfSessions = new ArrayList<>();
     private static volatile HashMap<String, String> request = new HashMap<>();
-
-    public static ArrayList<FireCoordinates> getFireCoordinates() {
-        return fireCoordinates;
-    }
 
     static ArrayList<PlayerOnServer> getPlayers() throws InterruptedException {
         return players;
